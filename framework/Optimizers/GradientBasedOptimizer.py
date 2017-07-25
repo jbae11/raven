@@ -578,8 +578,8 @@ class GradientBasedOptimizer(Optimizer):
               self.solutionExport.updateOutputValue([trajID,var],np.append(old,new))
 
             self.counter['solutionUpdate'][traj] += 1
-          else: #not ready to update solutionExport
-            break
+          else: #not ready to update solutionExport for this trajectory (check the others still!)
+            pass #placeholder just for clarity's sake
 
   def fractionalStepChangeFromGradHistory(self,traj):
     """
