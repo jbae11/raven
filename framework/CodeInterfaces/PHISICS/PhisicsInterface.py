@@ -21,111 +21,27 @@ import warnings
 warnings.simplefilter('default',DeprecationWarning)
 
 import os
-import copy
-import shutil
 import re
 from  __builtin__ import any as bAny
 from CodeInterfaceBaseClass import CodeInterfaceBase
 import phisicsdata
 import xml.etree.ElementTree as ET
 
-
 class Phisics(CodeInterfaceBase):
   """
-    this class is used a part of a code dictionary to specialize Model.Code for RELAP5-3D Version 4.0.3
-  """ 
-  def getPath(self):
-    """
-      Retriever for path.
-      @ In, None
-      @ Out, __path, string, path
-    """
-    return self.__path
-    
-  def getBase(self):
-    """
-      Retriever for file base.
-      @ In, None
-      @ Out, __base, string path
-    """
-    return self.__base 
-
-  def getTitle(self, depletionRoot):
-    """
-      get the job title. It will become later the instant output file name. 
-      @ In, self.mrtauStandAlone, True = mrtau is ran standalone, False = mrtau in not ran standalone
-      @ In, depletionRoot, XML tree from the depletion_input.xml
-      @ In, inpRoot, XML tree from the inp.xml
-      @ Out, fileTitle, string 
-    """
-    for child in depletionRoot.findall(".//title"):
-      jobTitle = str(child.text)
-      break 
-    return jobTitle
-    
-  def verifyMrtauFlagsAgree(self, depletionRoot):
-    """
-      Verifies the node "standalone"'s text in the depletion_input xml. if the standalone flag 
-      in the depletion_input disagrees with the mrtau standalone flag in the raven input, 
-      the codes errors out
-      @ In, mrtauStandAlone, True = mrtau is ran standalone, False = mrtau in not ran standalone
-      @ In, depletionRoot, XML tree from the depletion_input.xml
-      @ Out, None
-    """
-    for child in depletionRoot.findall(".//standalone"):
-      isMrtauStandAlone = child.text.lower()
-      tag = child.tag
-      break 
-    if self.mrtauStandAlone == False and isMrtauStandAlone == 'yes':
-      raise  ValueError("\n\n Error. The flags controlling the Mrtau standalone mode are incorrect. The node <standalone> in depletion_input file disagrees with the node <mrtauStandAlone> in the raven input. \n the matching solutions are: <mrtauStandAlone>yes</mrtauStandAlone> and <"+tag+">True<"+tag+">\n <mrtauStandAlone>no</mrtauStandAlone> and <"+tag+">False<"+tag+">")
-    if self.mrtauStandAlone == True and isMrtauStandAlone == 'no':
-      raise  ValueError("\n\n Error. The flags controlling the Mrtau standalone mode are incorrect. The node <standalone> in depletion_input file disagrees with the node <mrtauStandAlone> in the raven input. \n the matching solutions are: <mrtauStandAlone>yes</mrtauStandAlone> and <"+tag+">True<"+tag+">\n <mrtauStandAlone>no</mrtauStandAlone> and <"+tag+">False<"+tag+">")
-  
-  def parseControlOptions(self, depletionFile):
-    """
-      Parse the Material.xml data file and put the isotopes name as key and 
-      the decay constant relative to the isotopes as values 
-      @ In, depletionFile, string, depletion_input file
-      @ In, inpFile, string, Instant input file 
-    """   
-    depletionTree = ET.parse(depletionFile)
-    depletionRoot = depletionTree.getroot()
-    self.verifyMrtauFlagsAgree(depletionRoot)
-    jobTitle = self.getTitle(depletionRoot)
-    return jobTitle 
-  
-  def distributeVariablesToParsers(self, perturbedVars):
-    """
-      This module takes the perturbedVars dictionary. perturbedVars contains all the variables to be perturbed. 
-      The module transform the dictionary into dictionary of dictionary. This dictionary renders easy the distribution 
-      of the variable to their corresponding parser. For example, if the two variables are the following: 
-      {'FY|FAST|PU241|SE78':1.0, 'DECAY|BETA|U235':2.0}, the output dict will be: 
-      {'FY':{'FY|FAST|PU241|SE78':1.0}, 'DECAY':{'DECAY|BETA|U235':2.0}}
-      In: perturbVars, dictionary 
-      out: distributedVars, dictionary of dictionary 
-    """
-    distributedPerturbedVars = {}
-    pertType = []
-    #print (perturbedVars)
-    # teach what are the type of perturbation (decay FY etc...)
-    for i in perturbedVars.iterkeys():
-      splittedKeywords = i.split('|')
-      pertType.append(splittedKeywords[0])
-    # declare all the dictionaries according the different type of pert
-    for i in xrange (0,len(pertType)):
-      distributedPerturbedVars[pertType[i]] = {}
-    # populate the dictionaries 
-    for key, value in perturbedVars.items():
-      splittedKeywords = key.split('|')
-      for j in xrange (0,len(pertType)):
-        if splittedKeywords[0] == pertType[j] :
-          distributedPerturbedVars[pertType[j]][key] = value
-    #print (distributedPerturbedVars)
-    return distributedPerturbedVars
-  
+    this class is used a part of a code dictionary to specialize Model.Code for PHISICS code and MRTAU
+  """  
+  ##################################################
+  #### METHODS belonging to CodeInterfaces' API ####
+  ##################################################
   def addDefaultExtension(self):
+    """
+      Function to set the default input extensions.
+      @ In, None
+      @ Out, None
+    """    
     self.addInputExtension(['xml','dat','path'])
-  
+
   def _readMoreXML(self,xmlNode):
     """
       Function to read the portion of the xml input that belongs to this specialized class and initialize
@@ -136,37 +52,39 @@ class Phisics(CodeInterfaceBase):
       @ Out, None.
     """
     validPerturbation = ['additive', 'multiplicative', 'absolute']
-    self.perturbXS = validPerturbation[1] # default is cross section perturbation multiplicative mode
-    setOfPerturbations = set(validPerturbation)
+    # default is cross section perturbation multiplicative mode
+    self.perturbXS = validPerturbation[1] 
+    setOfPerturbations = validPerturbation
     #default values if the flag is not in the raven input  
     self.tabulation = True
     self.mrtauStandAlone = False
-    self.mrtauExecutable = None 
+    self.mrtauExecutable = None
+    self.jobTitle = 'PHISICS_perturbed'
     for child in xmlNode:
       if child.tag == 'PerturbXS':
-        if child.text.lower() in set(validPerturbation): self.perturbXS = child.text.lower()
-        else: raise ValueError("\n\nThe type of perturbation --"+child.text.lower()+"-- is not valid. You can choose one of the following \n"+"\n".join(set(validPerturbation)))
+        if child.text.lower() in validPerturbation: 
+          self.perturbXS = child.text.lower()
+        else: 
+          raise ValueError("\n\nThe type of perturbation --"+child.text.lower()+"-- is not valid. You can choose one of the following \n"+"\n".join(validPerturbation))
       if child.tag == 'tabulation':
         self.tabulation = None
-        if (child.text.lower() == 't' or child.text.lower() == 'true'):  self.tabulation = True
-        if (child.text.lower() == 'f' or child.text.lower() == 'false'): self.tabulation = False 
-        if (self.tabulation is None): raise ValueError("\n\n The tabulation node -- <"+child.tag+"> -- only supports the following text (case insensitive): \n True \n T \n False \n F" )
+        if child.text.lower() == 't' or child.text.lower() == 'true':  
+          self.tabulation = True
+        if child.text.lower() == 'f' or child.text.lower() == 'false': 
+          self.tabulation = False 
+        if self.tabulation is None: 
+          raise ValueError("\n\n The tabulation node -- <"+child.tag+"> -- only supports the following text (case insensitive): \n True \n T \n False \n F" )
       if child.tag == 'mrtauStandAlone':
         self.mrtauStandAlone = None 
-        if (child.text.lower() == 't' or child.text.lower() == 'true'):  self.mrtauStandAlone = True 
-        if (child.text.lower() == 'f' or child.text.lower() == 'false'):  self.mrtauStandAlone = False 
-        if (self.mrtauStandAlone is None): raise ValueError("\n\n The flag activating MRTAU standalone mode -- <"+child.tag+"> -- only supports the following text (case insensitive): \n True \n T \n False \n F. \n Default Value is False" )
+        if (child.text.lower() == 't' or child.text.lower() == 'true'):  
+          self.mrtauStandAlone = True 
+        if (child.text.lower() == 'f' or child.text.lower() == 'false'):  
+          self.mrtauStandAlone = False 
+        if (self.mrtauStandAlone is None): 
+          raise ValueError("\n\n The flag activating MRTAU standalone mode -- <"+child.tag+"> -- only supports the following text (case insensitive): \n True \n T \n False \n F. \n Default Value is False" )
       if child.tag == 'mrtauStandAloneExecutable' and self.mrtauStandAlone == True:
         self.mrtauExecutable = child.text
-        
-  def switchExecutable(self):
-    """
-      This module replaces the executable if the user chooses to use MRTAU in standalone mode. 
-      @ In, None 
-      @ Out, mrtauExecutable, string, absolute path to mrtau executable
-    """
-    return self.mrtauExecutable
-   
+
   def generateCommand(self,inputFiles,executable,clargs=None,fargs=None):
     """
       This method is used to retrieve the command (in tuple format) needed to launch the Code.
@@ -180,24 +98,16 @@ class Phisics(CodeInterfaceBase):
       @ Out, returnCommand, tuple, tuple containing the generated command. returnCommand[0] is the command to run the code (string), returnCommand[1] is the name of the output root
     """
     if self.mrtauStandAlone == True: 
-      executable = self.switchExecutable()
+      executable = self. __switchExecutable()
     found = False
     index = 0
-    outputfile = 'out~'+inputFiles[index].getBase()
-    #printprint (outputfile)
-    if clargs: addflags = clargs['text']
-    else     : addflags = ''
-    #commandToRun = executable + ' -i ' + inputFiles[index].getFilename() + ' -o ' + outputfile  + '.o' + ' -r ' + outputfile  + '.r' + addflags
-    #commandToRun = executable + ' -i ' + inputFiles[index].getFilename() + ' -o ' + outputfile  + '.o' +  addflags
+    outputfile = 'out~'+self.jobTitle.strip()
     commandToRun = executable
     commandToRun = commandToRun.replace("\n"," ")
     commandToRun  = re.sub("\s\s+" , " ", commandToRun )
-    #print (commandToRun)
     returnCommand = [('parallel',commandToRun)], outputfile
-    #print (commandToRun)
-    #print (returnCommand)
     return returnCommand
-  
+
   def finalizeCodeOutput(self,command,output,workingDir):
     """
       This method is called by the RAVEN code at the end of each run (if the method is present, since it is optional).
@@ -212,8 +122,6 @@ class Phisics(CodeInterfaceBase):
     pertNumber = splitWorkDir[-1]
     outputobj=phisicsdata.phisicsdata(output, workingDir, self.mrtauStandAlone, self.jobTitle)
     return "keff"+str(pertNumber).strip()
-    #if outputobj.hasAtLeastMinorData(): outputobj.writeCSV(os.path.join(workingDir,output+'.csv'))
-    #else: raise IOError('Relap5 output file '+ command.split('-o')[0].split('-i')[-1].strip()+'.o' + ' does not contain any minor edits. It might be crashed!')
 
   def checkForOutputFailure(self,output,workingDir):
     """
@@ -260,34 +168,129 @@ class Phisics(CodeInterfaceBase):
     
     keyWordDict = {} 
     count = 0
-    #print (currentInputFiles)
-    #print (Kwargs)
-    #print (Kwargs['SampledVars'])
     perturbedVars = Kwargs['SampledVars']
     
     for inFile in currentInputFiles:
       keyWordDict[inFile.getType().lower()] = count 
       count = count + 1
 
-    distributedPerturbedVars = self.distributeVariablesToParsers(perturbedVars)
-    #print (distributedPerturbedVars)
-    #print (currentInputFiles)
-    #print (self.tabulation)
+    distributedPerturbedVars = self. __distributeVariablesToParsers(perturbedVars)
     booleanTab = self.tabulation 
-    self.jobTitle = self.parseControlOptions(currentInputFiles[keyWordDict['depletion_input']].getAbsFile())
+    self.jobTitle = self. __parseControlOptions(currentInputFiles[keyWordDict['depletion_input']].getAbsFile())
     
     for i in distributedPerturbedVars.iterkeys():
-      if i == 'DECAY'         : decayParser        = DecayParser.DecayParser(currentInputFiles[keyWordDict['decay']].getAbsFile(), **distributedPerturbedVars[i])
-      if i == 'DENSITY'       : materialParser     = MaterialParser.MaterialParser(currentInputFiles[keyWordDict['material']].getAbsFile(), **distributedPerturbedVars[i])
-      if i == 'FY'            : FissionYieldParser = FissionYieldParser.FissionYieldParser(currentInputFiles[keyWordDict['fissionyield']].getAbsFile(), **distributedPerturbedVars[i])
-      if i == 'QVALUES'       : QValuesParser      = QValuesParser.QValuesParser(currentInputFiles[keyWordDict['fissqvalue']].getAbsFile(), **distributedPerturbedVars[i])
-      if i == 'ALPHADECAY'    : BetaDecayParser    = PathParser.PathParser(currentInputFiles[keyWordDict['alphadecay']].getAbsFile(), **distributedPerturbedVars[i])
-      if i == 'BETA+DECAY'    : BetaDecayParser    = PathParser.PathParser(currentInputFiles[keyWordDict['beta+decay']].getAbsFile(), **distributedPerturbedVars[i])
-      if i == 'BETA+XDECAY'   : BetaDecayParser    = PathParser.PathParser(currentInputFiles[keyWordDict['beta+xdecay']].getAbsFile(), **distributedPerturbedVars[i])
-      if i == 'BETADECAY'     : BetaDecayParser    = PathParser.PathParser(currentInputFiles[keyWordDict['betadecay']].getAbsFile(), **distributedPerturbedVars[i])
-      if i == 'BETAXDECAY'    : BetaDecayParser    = PathParser.PathParser(currentInputFiles[keyWordDict['betaxdecay']].getAbsFile(), **distributedPerturbedVars[i])
-      if i == 'INTTRADECAY'   : BetaDecayParser    = PathParser.PathParser(currentInputFiles[keyWordDict['inttradecay']].getAbsFile(), **distributedPerturbedVars[i])
-      if i == 'XS'            : XSParser           = XSCreator.XSCreator(currentInputFiles[keyWordDict['xs']].getAbsFile(), booleanTab, **distributedPerturbedVars[i])
+      if i == 'DECAY': 
+        decayParser = DecayParser.DecayParser(currentInputFiles[keyWordDict['decay']].getAbsFile(), **distributedPerturbedVars[i])
+      if i == 'DENSITY': 
+        materialParser = MaterialParser.MaterialParser(currentInputFiles[keyWordDict['material']].getAbsFile(), **distributedPerturbedVars[i])
+      if i == 'FY': 
+        issionYieldParser = FissionYieldParser.FissionYieldParser(currentInputFiles[keyWordDict['fissionyield']].getAbsFile(), **distributedPerturbedVars[i])
+      if i == 'QVALUES': 
+        QValuesParser = QValuesParser.QValuesParser(currentInputFiles[keyWordDict['fissqvalue']].getAbsFile(), **distributedPerturbedVars[i])
+      if i == 'ALPHADECAY': 
+        BetaDecayParser = PathParser.PathParser(currentInputFiles[keyWordDict['alphadecay']].getAbsFile(), **distributedPerturbedVars[i])
+      if i == 'BETA+DECAY': 
+        BetaDecayParser = PathParser.PathParser(currentInputFiles[keyWordDict['beta+decay']].getAbsFile(), **distributedPerturbedVars[i])
+      if i == 'BETA+XDECAY': 
+        BetaDecayParser = PathParser.PathParser(currentInputFiles[keyWordDict['beta+xdecay']].getAbsFile(), **distributedPerturbedVars[i])
+      if i == 'BETADECAY': 
+        BetaDecayParser = PathParser.PathParser(currentInputFiles[keyWordDict['betadecay']].getAbsFile(), **distributedPerturbedVars[i])
+      if i == 'BETAXDECAY': 
+        BetaDecayParser = PathParser.PathParser(currentInputFiles[keyWordDict['betaxdecay']].getAbsFile(), **distributedPerturbedVars[i])
+      if i == 'INTTRADECAY': 
+        BetaDecayParser = PathParser.PathParser(currentInputFiles[keyWordDict['inttradecay']].getAbsFile(), **distributedPerturbedVars[i])
+      if i == 'XS': 
+        XSParser = XSCreator.XSCreator(currentInputFiles[keyWordDict['xs']].getAbsFile(), booleanTab, **distributedPerturbedVars[i])
     return currentInputFiles
+
+  ############################################################
+  #### Local METHODS not belonging to CodeInterfaces' API #### 
+  ############################################################
+  def  __getTitle(self, depletionRoot):
+    """
+      get the job title. It will become later the instant output file name. 
+      @ In, self.mrtauStandAlone, True = mrtau is ran standalone, False = mrtau in not ran standalone
+      @ In, depletionRoot, XML tree from the depletion_input.xml
+      @ In, inpRoot, XML tree from the inp.xml
+      @ Out, jobTitle, string, the title of the job (if not found, None is returned)
+    """
+    jobTitle = None
+    for child in depletionRoot.findall(".//title"):
+      jobTitle = str(child.text)
+      break 
+    return jobTitle
+    
+  def  __verifyMrtauFlagsAgree(self, depletionRoot):
+    """
+      Verifies the node "standalone"'s text in the depletion_input xml. if the standalone flag 
+      in the depletion_input disagrees with the mrtau standalone flag in the raven input, 
+      the codes errors out
+      @ In, mrtauStandAlone, True = mrtau is ran standalone, False = mrtau in not ran standalone
+      @ In, depletionRoot, XML tree from the depletion_input.xml
+      @ Out, None
+    """
+    for child in depletionRoot.findall(".//standalone"):
+      isMrtauStandAlone = child.text.lower()
+      tag = child.tag
+      break 
+    if self.mrtauStandAlone == False and isMrtauStandAlone == 'yes':
+      raise  ValueError("\n\n Error. The flags controlling the Mrtau standalone mode are incorrect. The node <standalone> in depletion_input file disagrees with the node <mrtauStandAlone> in the raven input. \n the matching solutions are: <mrtauStandAlone>yes</mrtauStandAlone> and <"+tag+">True<"+tag+">\n <mrtauStandAlone>no</mrtauStandAlone> and <"+tag+">False<"+tag+">")
+    if self.mrtauStandAlone == True and isMrtauStandAlone == 'no':
+      raise  ValueError("\n\n Error. The flags controlling the Mrtau standalone mode are incorrect. The node <standalone> in depletion_input file disagrees with the node <mrtauStandAlone> in the raven input. \n the matching solutions are: <mrtauStandAlone>yes</mrtauStandAlone> and <"+tag+">True<"+tag+">\n <mrtauStandAlone>no</mrtauStandAlone> and <"+tag+">False<"+tag+">")
+  
+  def  __parseControlOptions(self, depletionFile):
+    """
+      Parse the Material.xml data file and put the isotopes name as key and 
+      the decay constant relative to the isotopes as values 
+      @ In, depletionFile, string, depletion_input file
+      @ In, inpFile, string, Instant input file
+      @ Out, jobTitle, string, Instant input file 
+    """   
+    depletionTree = ET.parse(depletionFile)
+    depletionRoot = depletionTree.getroot()
+    self. __verifyMrtauFlagsAgree(depletionRoot)
+    jobTitle = self. __getTitle(depletionRoot)
+    return jobTitle 
+  
+  def  __distributeVariablesToParsers(self, perturbedVars):
+    """
+      This module takes the perturbedVars dictionary. perturbedVars contains all the variables to be perturbed. 
+      The module transform the dictionary into dictionary of dictionary. This dictionary renders easy the distribution 
+      of the variable to their corresponding parser. For example, if the two variables are the following: 
+      {'FY|FAST|PU241|SE78':1.0, 'DECAY|BETA|U235':2.0}, the output dict will be: 
+      {'FY':{'FY|FAST|PU241|SE78':1.0}, 'DECAY':{'DECAY|BETA|U235':2.0}}
+      In: perturbVars, dictionary 
+      out: distributedVars, dictionary of dictionary 
+    """
+    distributedPerturbedVars = {}
+    pertType = []
+    # teach what are the type of perturbation (decay FY etc...)
+    for i in perturbedVars.iterkeys():
+      splittedKeywords = i.split('|')
+      pertType.append(splittedKeywords[0])
+    # declare all the dictionaries according the different type of pert
+    for i in xrange (0,len(pertType)):
+      distributedPerturbedVars[pertType[i]] = {}
+    # populate the dictionaries 
+    for key, value in perturbedVars.items():
+      splittedKeywords = key.split('|')
+      for j in xrange (0,len(pertType)):
+        if splittedKeywords[0] == pertType[j] :
+          distributedPerturbedVars[pertType[j]][key] = value
+    return distributedPerturbedVars
+  
+  def  __switchExecutable(self):
+    """
+      This module replaces the executable if the user chooses to use MRTAU in standalone mode. 
+      @ In, None 
+      @ Out, mrtauExecutable, string, absolute path to mrtau executable
+    """
+    return self.mrtauExecutable
+  
+  
+  
+
+  
+
     
 

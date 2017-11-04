@@ -51,8 +51,7 @@ class phisicsdata():
     pathToXSOutput    = os.path.join(workingDir, instantOutput[3])
     self.perturbationNumber     = self.getPertNumber(workingDir)
     self.cleanUp(workingDir)
-    
-    
+
     if self.mrtauBoolean == False:
       mrtauTimeSteps            = self.getMrtauInstantTimeSteps()
       instantTimeSteps          = self.getInstantTimeSteps()
