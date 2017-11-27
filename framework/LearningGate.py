@@ -127,21 +127,21 @@ class supervisedLearningGate(utils.metaclass_insert(abc.ABCMeta,BaseType),Messag
       @ In, trainingSet, dict or list, data used to train the ROM; if a list is provided a temporal ROM is generated.
       @ Out, None
     """
-    if type(trainingSet).__name__ not in  'dict':
-      self.raiseAnError(IOError,"The training set is not a dictionary!")
-    if len(trainingSet.keys()) == 0:
+    # TODO only compatible with PointSet and HistorySet; extend to ND?
+    if type(trainingSet).__name__ not in ['PointSet','HistorySet']:
+      self.raiseAnError(IOError,"The training set is not a recognized data object:",type(trainingSet))
+    if len(trainingSet.vars) == 0 or len(trainingSet) == 0:
       self.raiseAnError(IOError,"The training set is empty!")
 
-    if any(type(x).__name__ == 'list' for x in trainingSet.values()):
+    # OLD if any(type(x).__name__ == 'list' for x in trainingSet.values()):
+    if len(trainingSet.indexes) > 0:
       # we need to build a "time-dependent" ROM
       self.isADynamicModel = True
-      if self.pivotParameterId not in trainingSet.keys():
+      if self.pivotParameterId not in trainingSet.indexes:
         self.raiseAnError(IOError,"the pivot parameter "+ self.pivotParameterId +" is not present in the training set. A time-dependent-like ROM cannot be created!")
-      if type(trainingSet[self.pivotParameterId]).__name__ != 'list':
-        self.raiseAnError(IOError,"the pivot parameter "+ self.pivotParameterId +" is not a list. Are you sure it is part of the output space of the training set?")
-      self.historySteps = trainingSet.get(self.pivotParameterId)[-1]
-      if len(self.historySteps) == 0:
-        self.raiseAnError(IOError,"the training set is empty!")
+      #if type(trainingSet[self.pivotParameterId]).__name__ != 'list':
+      #  self.raiseAnError(IOError,"the pivot parameter "+ self.pivotParameterId +" is not a list. Are you sure it is part of the output space of the training set?")
+      self.historySteps = trainingSet[self.pivotParameterId]#[-1]
       if self.canHandleDynamicData:
         # the ROM is able to manage the time dependency on its own
         self.supervisedContainer[0].train(trainingSet)
@@ -149,6 +149,7 @@ class supervisedLearningGate(utils.metaclass_insert(abc.ABCMeta,BaseType),Messag
         # we need to construct a chain of ROMs
         # the check on the number of time steps (consistency) is performed inside the historySnapShoots method
         # get the time slices
+        # TODO dataobject rework, historySnapShoots needs to be reworked here, or data copied
         newTrainingSet = mathUtils.historySnapShoots(trainingSet, len(self.historySteps))
         if type(newTrainingSet).__name__ != 'list':
           self.raiseAnError(IOError,newTrainingSet)

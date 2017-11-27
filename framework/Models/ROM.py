@@ -337,8 +337,9 @@ class ROM(Dummy):
       self.amITrained               = copy.deepcopy(trainingSet.amITrained)
       self.supervisedEngine         = copy.deepcopy(trainingSet.supervisedEngine)
     else:
-      self.trainingSet = copy.copy(self._inputToInternal(trainingSet, full=True))
-      self._replaceVariablesNamesWithAliasSystem(self.trainingSet, 'inout', False)
+      self.trainingSet = copy.copy(trainingSet)
+      # OLD self.trainingSet = copy.copy(self._inputToInternal(trainingSet, full=True))
+      # OLD TODO how to do this with new?: self._replaceVariablesNamesWithAliasSystem(self.trainingSet, 'inout', False)
       self.supervisedEngine.train(self.trainingSet)
       self.amITrained = self.supervisedEngine.amITrained
 
