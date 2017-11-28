@@ -243,10 +243,7 @@ class ExternalModel(Dummy):
         @ In, samplerType, string, is the type of sampler that is calling to generate a new input
         @ In, kwargs, dict,  is a dictionary that contains the information coming from the sampler,
            a mandatory key is the sampledVars'that contains a dictionary {'name variable':value}
-        @ Out, returnValue, tuple, This will hold two pieces of information,
-          the first item will be the input data used to generate this sample,
-          the second item will be the output of this model given the specified
-          inputs
+        @ Out, rlz, dict, realization
     """
     Input = self.createNewInput(myInput, samplerType, **kwargs)
     inRun = copy.copy(self._manipulateInput(Input[0][0]))
