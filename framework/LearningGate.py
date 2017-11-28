@@ -142,28 +142,34 @@ class supervisedLearningGate(utils.metaclass_insert(abc.ABCMeta,BaseType),Messag
       #if type(trainingSet[self.pivotParameterId]).__name__ != 'list':
       #  self.raiseAnError(IOError,"the pivot parameter "+ self.pivotParameterId +" is not a list. Are you sure it is part of the output space of the training set?")
       self.historySteps = trainingSet[self.pivotParameterId]#[-1]
+      print('DEBUGG history steps:',self.historySteps)
       if self.canHandleDynamicData:
         # the ROM is able to manage the time dependency on its own
         self.supervisedContainer[0].train(trainingSet)
       else:
-        # we need to construct a chain of ROMs
-        # the check on the number of time steps (consistency) is performed inside the historySnapShoots method
+        # we need to construct a chain of ROMs; first construct the template one
+        originalROM = copy.deepcopy(self.supervisedContainer[0])
+        # start creating and training the time-dep ROMs
+        self.supervisedContainer = []
+        for ts in range(len(self.historySteps)):
+          self.supervisedContainer.append(copy.deepcopy(originalROM))
+          # get the data
+          data = trainingSet.asDataset().isel(**{trainingSet.sampleTag:ts})
+          print(data)
+          aaaa # TODO need to debug time-dependent case
+          # train
+          self.supervisedContainer[-1].train(trainingSet.asDataset().isel(RAVEN_sample_ID=ts))
         # get the time slices
         # TODO dataobject rework, historySnapShoots needs to be reworked here, or data copied
+        # iterate over time slices to create new ROMs
         newTrainingSet = mathUtils.historySnapShoots(trainingSet, len(self.historySteps))
         if type(newTrainingSet).__name__ != 'list':
           self.raiseAnError(IOError,newTrainingSet)
         # copy the original ROM
-        originalROM = copy.deepcopy(self.supervisedContainer[0])
-        # start creating and training the time-dep ROMs
-        self.supervisedContainer = [] # [copy.deepcopy(originalROM) for _ in range(len(self.historySteps))]
-        # train
-        for ts in range(len(self.historySteps)):
-          self.supervisedContainer.append(copy.deepcopy(originalROM))
-          self.supervisedContainer[-1].train(newTrainingSet[ts])
     else:
       #self._replaceVariablesNamesWithAliasSystem(self.trainingSet, 'inout', False)
-      self.supervisedContainer[0].train(trainingSet)
+      # FIXME TODO this is not optimal, but will get the ROMs running as expected.
+      self.supervisedContainer[0].train(trainingSet.getVarValues(trainingSet.getVars()))
     self.amITrained = True
 
   def confidence(self, request):
