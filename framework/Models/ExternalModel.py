@@ -254,6 +254,7 @@ class ExternalModel(Dummy):
     rlz = {}
     rlz.update(inRun)
     rlz.update(result)
+    rlz.update(kwargs)
     return rlz
 
   def collectOutput(self,finishedJob,output,options=None):

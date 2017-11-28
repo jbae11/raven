@@ -188,29 +188,26 @@ class superVisedLearning(utils.metaclass_insert(abc.ABCMeta),MessageHandler.Mess
         resp = self.checkArrayConsistency(valueToUse)
         if not resp[0]:
           self.raiseAnError(IOError,'In training set for feature '+feat+':'+resp[1])
-        print('DEBUGG vals shape:',feat,valueToUse.shape)
         #valueToUse = np.asarray(valueToUse)
         if valueToUse.size != featureValues[:,0].size:
           self.raiseAWarning('feature values:',featureValues[:,0].size,tag='ERROR')
           self.raiseAWarning('target values:',valueToUse.size,tag='ERROR')
           self.raiseAnError(IOError,'In training set, the number of values provided for feature '+feat+' are != number of target outcomes!')
-        self._localNormalizeData(values,names,feat)
+        self._localNormalizeData(valueToUse,feat)
         res = (valueToUse - self.muAndSigmaFeatures[feat][0])/self.muAndSigmaFeatures[feat][1]
-        print('DEBUGG res:',res)
         featureValues[:,cnt] = (valueToUse - self.muAndSigmaFeatures[feat][0])/self.muAndSigmaFeatures[feat][1]
     self.__trainLocal__(featureValues,targetValues)
     self.amITrained = True
 
-  def _localNormalizeData(self,values,names,feat):
+  def _localNormalizeData(self,values,feat):
     """
       Method to normalize data based on the mean and standard deviation.  If undesired for a particular ROM,
       this method can be overloaded to simply pass (see, e.g., GaussPolynomialRom).
-      @ In, values, list, list of feature values (from tdict)
-      @ In, names, list, names of features (from tdict)
+      @ In, values, list, list of feature values (from tdict[index])
       @ In, feat, list, list of features (from ROM)
       @ Out, None
     """
-    self.muAndSigmaFeatures[feat] = mathUtils.normalizationFactors(values[names.index(feat)])
+    self.muAndSigmaFeatures[feat] = mathUtils.normalizationFactors(values)
 
   def confidence(self,edict):
     """
@@ -686,11 +683,10 @@ class GaussPolynomialRom(superVisedLearning):
       else:
         self.raiseAWarning('ROM does not know how to return "'+request+'".  Skipping...')
 
-  def _localNormalizeData(self,values,names,feat):
+  def _localNormalizeData(self,values,feat):
     """
       Overwrites default normalization procedure.
       @ In, values, list(float), unused
-      @ In, names, list(string), unused
       @ In, feat, string, feature to (not) normalize
       @ Out, None
     """
@@ -2277,7 +2273,7 @@ class SciKitLearn(superVisedLearning):
     params = {}
     return params
 
-  def _localNormalizeData(self,values,names,feat):
+  def _localNormalizeData(self,values,feat):
     """
       Overwrites default normalization procedure.
       @ In, values, list(float), unused
@@ -2288,7 +2284,7 @@ class SciKitLearn(superVisedLearning):
     if not self.externalNorm:
       self.muAndSigmaFeatures[feat] = (0.0,1.0)
     else:
-      super(SciKitLearn, self)._localNormalizeData(values,names,feat)
+      super(SciKitLearn, self)._localNormalizeData(values,feat)
 #
 #
 #
@@ -2368,11 +2364,10 @@ class ARMA(superVisedLearning):
       self.reseed(seed)
     self.__dict__ = d
 
-  def _localNormalizeData(self,values,names,feat): # This function is not used in this class and can be removed
+  def _localNormalizeData(self,values,feat): # This function is not used in this class and can be removed
     """
       Overwrites default normalization procedure.
       @ In, values, unused
-      @ In, names, unused
       @ In, feat, feature to normalize
       @ Out, None
     """

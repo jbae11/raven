@@ -200,6 +200,7 @@ class Dummy(Model):
     if isinstance(result,Runners.Error):
       self.raiseAnError(AttributeError,'No available output to collect!')
     self._replaceVariablesNamesWithAliasSystem(result)
+    print('DEBUGG result:',result)
     output.addRealization(result)
     return
     # END can be abstracted to base class

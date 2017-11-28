@@ -391,7 +391,11 @@ class ROM(Dummy):
     """
     Input = self.createNewInput(myInput, samplerType, **kwargs)
     inRun = self._manipulateInput(Input[0])
-    returnValue = inRun,self._externalRun(inRun)
+    returnValue = self._externalRun(inRun)
+    rlz = {}
+    rlz.update(inRun)
+    rlz.update(returnValue)
+    rlz.update(kwargs)
     return returnValue
 
   def reseed(self,seed):
