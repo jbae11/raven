@@ -557,6 +557,10 @@ class InputNode:
     """
     return self.children
 
+#
+#
+#
+#
 class HierarchicalNode(MessageHandler.MessageUser):
   """
     The Node class. It represents the base for each TreeStructure construction
@@ -963,8 +967,10 @@ class InputTree:
     """
     return self.rootNode.printXML()
 
-
-
+#
+#
+#
+#
 class HierarchicalTree(MessageHandler.MessageUser):
   """
     The class that realizes a hierarchal Tree Structure
@@ -1112,21 +1118,24 @@ class HierarchicalTree(MessageHandler.MessageUser):
     msg=self._rootnode.stringNode(msg)
     return msg
 
-##################
-# METADATA TREE #
 #################
-class MetadataTree(HierarchicalTree):
+# METADATA      #
+#################
+class MetadataTree(MessageHandler.MessageUser):
   """
-    Class for construction of metadata xml trees used in data objects.  Usually contains summary data
-    such as that produced by postprocessor models.  Two types of tree exist: dynamic and static.  See
-    RAVEN Output type of Files object.
+    Class for construction of metadata trees used in data objects.  Usually contains summary data
+    about the entities that were involved in a Step.
   """
   #TODO change to inherit from InputTree or base Tree
-  def __init__(self,messageHandler,rootName):
+  def __init__(self,messageHandler,rootNode=None):
+
+    self.messageHandler = messageHandler
     self.pivotParam = None
     self.type = 'MetadataTree'
     node = HierarchicalNode(messageHandler,rootName, valuesIn={})
     HierarchicalTree.__init__(self,messageHandler,node)
+
+  def getroot(self):
 
   def __repr__(self):
     """
@@ -1190,8 +1199,6 @@ class MetadataTree(HierarchicalTree):
     return tNode
 
 
-
-
 ####################
 #  NodePath Class  #
 #  used to iterate #
@@ -1236,6 +1243,10 @@ class NodePath(object):
     nodes = list(self.iterfind(node, name))
     return nodes
 
+#
+#
+#
+#
 def isnode(node):
   """
     Method to create an iterator starting from a matching node for all the nodes
