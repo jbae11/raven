@@ -411,15 +411,19 @@ class SingleRun(Step):
       @ Out, None
     """
     ## first collect them
-    metaKeys = set()
+    metaKeys = {'pointwise':set(),'general':set()}
     for role,entities in inDictionary.items():
       if isinstance(entities,list):
         for entity in entities:
           if hasattr(entity,'provideExpectedMetaKeys'):
-            metaKeys = metaKeys.union(entity.provideExpectedMetaKeys())
+            new = entity.provideExpectedMetaKeys()
+            metaKeys['pointwise'] = metaKeys['pointwise'].union(new['pointwise'])
+            metaKeys['general'] = metaKeys['general'].union(new['general'])
       else:
         if hasattr(entities,'provideExpectedMetaKeys'):
-          metaKeys = metaKeys.union(entities.provideExpectedMetaKeys())
+          new = entity.provideExpectedMetaKeys()
+          metaKeys['pointwise'] = metaKeys['pointwise'].union(new['pointwise'])
+          metaKeys['general'] = metaKeys['general'].union(new['general'])
     ## then give them to the output data objects
     for out in inDictionary['Output']:
       if isinstance(out,DataSet):

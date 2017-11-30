@@ -58,7 +58,7 @@ class BaseType(MessageHandler.MessageUser):
     self.printTag         = 'BaseType'                                                  # the tag that refers to this class in all the specific printing
     self.messageHandler   = None                                                        # message handling object
     self.variableGroups   = {}                                                          # the variables this class needs to be aware of
-    self.metadataKeys     = set()                                                       # list of registered metadata keys to expect from this entity
+    self.metadataKeys     = {'pointwise':set(),'general':set()}                         # list of registered metadata keys to expect from this entity
     self.mods             = utils.returnImportModuleString(inspect.getmodule(BaseType)) #list of modules this class depends on (needed for automatic parallel python)
     for baseClass in self.__class__.__mro__:
       self.mods.extend(utils.returnImportModuleString(inspect.getmodule(baseClass),True))
@@ -250,10 +250,14 @@ class BaseType(MessageHandler.MessageUser):
     """
     return self.metadataKeys
 
-  def addMetaKeys(self,*args):
+  def addMetaKeys(self,*args,pointwise=True):
     """
       Adds keywords to a list of expected metadata keys.
       @ In, args, list(str), keywords to register
+      @ In, pointwise, bool, optional, if True then register as pointwise metadata (otherwise as general)
       @ Out, None
     """
-    self.metadataKeys = self.metadataKeys.union(set(args))
+    if pointwise:
+      self.metadataKeys['pointwise'] = self.metadataKeys['pointwise'].union(set(args))
+    else:
+      self.metadataKeys['general'] = self.metadataKeys['general'].union(set(args))

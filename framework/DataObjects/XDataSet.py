@@ -62,10 +62,12 @@ class DataSet(DataObject):
   def addExpectedMeta(self,keys):
     """
       Registers meta to look for in realizations.
-      @ In, keys, set(str), keys to register
+      @ In, keys, dict, as {'pointwise':[str], 'general':[str]} variables to register as either pointwise or general metadata
       @ Out, None
     """
     # TODO add option to skip parts of meta if user wants to
+    pointwise = keys['pointwise']
+    general = keys['general']
     # remove already existing keys
     keys = list(key for key in keys if key not in self._allvars)
     # if no new meta, move along
