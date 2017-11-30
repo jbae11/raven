@@ -109,6 +109,7 @@ class DataObject(utils.metaclass_insert(abc.ABCMeta,BaseType)):
     self._allvars  = []     # list(str) of vars IN ORDER of their index
 
     self._meta         = {}     # dictionary to collect meta until data is collapsed
+    self._expectMeta   = []     # list of terms expected for the GENERAL metadata
     self._heirarchal   = False  # if True, non-traditional format (not yet implemented)
     self._selectInput  = None   # if not None, describes how to collect input data from history
     self._selectOutput = None   # if not None, describes how to collect output data from history

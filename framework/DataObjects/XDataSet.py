@@ -68,16 +68,23 @@ class DataSet(DataObject):
     # TODO add option to skip parts of meta if user wants to
     pointwise = keys['pointwise']
     general = keys['general']
-    # remove already existing keys
-    keys = list(key for key in keys if key not in self._allvars)
-    # if no new meta, move along
-    if len(keys) == 0:
-      return
-    # CANNOT add expected meta after samples are started
-    assert(self._data is None)
-    assert(self._collector is None or len(self._collector) == 0)
-    self._metavars.extend(keys)
-    self._allvars.extend(keys)
+    # first handle pointwise
+    ## remove already existing keys
+    pointwise = list(key for key in pointwise if key not in self._allvars)
+    ## if no new meta, move along
+    if len(pointwise) > 0:
+      ## CANNOT add expected meta after samples are started
+      assert(self._data is None)
+      assert(self._collector is None or len(self._collector) == 0)
+      self._metavars.extend(keys)
+      self._allvars.extend(keys)
+    # then handle general by storing a list of expected variable names.
+    # When handed through a realization, the value corresponding to this variable key
+    #   will be a StaticXMLOutput object, which can then be merged with any existing data.
+    for key in general:
+      if key not in self._expectMeta:
+        self._expectMeta.append(key)
+
 
   def addMeta(self,tag,xmlDict):
     """
