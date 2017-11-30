@@ -179,47 +179,30 @@ checkSame('Equivalency only text !=:',a!=b,False)
 ##################
 
 # construction
-static = TS.StaticMetadataTree(mh,'myStaticData')
-dynamic = TS.DynamicMetadataTree(mh,'myDynamicData','timeParam')
-
-# test "dynamic" attribute set correctly
-checkSame('Static "dynamic" property correctly set:',static.getrootnode().get('dynamic'),'False')
-checkSame('Dynamic "dynamic" property correctly set:',dynamic.getrootnode().get('dynamic'),'True')
+static = TS.MetadataTree(mh,'myStaticData')
 
 # test message handler works (implicit test, no error means success)
-static.raiseADebug('Debug message in Static successful!')
-dynamic.raiseADebug('Debug message in Dynamic successful!')
-results['pass']+=2
+static.raiseADebug('Debug message successful!')
+results['pass']+=1
 
 #test adding scalar entries (implicit test, no error means success)
 static.addScalar('myTarget','myMetric',3.14159)
 results['pass']+=1
-dynamic.addScalar('myTarget','myMetric',3.14159,pivotVal=0.1) #pivot value as float
-results['pass']+=1
-dynamic.addScalar('myTarget','myMetric',299792358,pivotVal='0.2') #pivot value as string
+
+static.addVector('myTarget','vecMet',{'x':1.0, 'y':2.0})
 results['pass']+=1
 
-#test finding pivotNode (dynamic only)
-a = TS.HierarchicalNode(mh,'timeParam',valuesIn={'value':0.2})
-b = dynamic._findPivot(dynamic.getrootnode(),0.2)
-checkSame('Finding pivot node:',b,a)
+print(static.getrootnode().stringNode(''))
 
 #test finding targetNode
-## static
 a = TS.HierarchicalNode(mh,'myTarget')
 b = static._findTarget(static.getrootnode(),'myTarget')
 checkSame('Finding target (static):',b,a)
-## dynamic
-a = TS.HierarchicalNode(mh,'myTarget')
-c = dynamic._findTarget(dynamic.getrootnode(),'myTarget',0.2)
-checkSame('Finding target (dynamic):',c,a)
 
 #test values recorded
-checkAnswer('Recorded data (static):',b.findBranch('myMetric').text,3.14159)
-c = dynamic._findTarget(dynamic.getrootnode(),'myTarget',0.1)
-checkAnswer('Recorded data (dynamic 1):',c.findBranch('myMetric').text,3.14159)
-c = dynamic._findTarget(dynamic.getrootnode(),'myTarget',0.2)
-checkAnswer('Recorded data (dynamic 2):',c.findBranch('myMetric').text,299792358)
+checkAnswer('Recorded data scalar:',b.findBranch('myMetric').text,3.14159)
+# TODO how to search deeper path? xmlUtils?
+checkAnswer('Recorded data dynamic 1:',b.findBranch('myMetric').text,3.14159)
 
 print('{0}ed: {2}, {1}ed: {3}'.format(*(list(str(r) for r in results.keys())+results.values())))
 sys.exit(results["fail"])

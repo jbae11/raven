@@ -1124,7 +1124,8 @@ class MetadataTree(HierarchicalTree):
   #TODO change to inherit from InputTree or base Tree
   def __init__(self,messageHandler,rootName):
     self.pivotParam = None
-    node = HierarchicalNode(messageHandler,rootName, valuesIn={'dynamic':str(self.dynamic)})
+    self.type = 'MetadataTree'
+    node = HierarchicalNode(messageHandler,rootName, valuesIn={})
     HierarchicalTree.__init__(self,messageHandler,node)
 
   def __repr__(self):
@@ -1143,7 +1144,7 @@ class MetadataTree(HierarchicalTree):
       @ In, name, string, name of characteristic of target to add
       @ In, value, string/float/etc, value of characteristic
       @ In, root, Node object, optional, node to which "target" belongs or should be added to
-      @ In, pivotVal, float, optional, if specified the value of the pivotParam to add target value to
+      @ In, pivotVal, float, optional, pivot value at which scalar should be added
       @ Out, None
     """
     if root is None:
@@ -1151,6 +1152,28 @@ class MetadataTree(HierarchicalTree):
     #FIXME it's possible the user could provide illegal characters here.  What are illegal characters for us?
     targ = self._findTarget(root,target,pivotVal)
     targ.appendBranch(HierarchicalNode(self.messageHandler,name,text=value))
+
+  def addVector(self,target,name,valueDict,root=None):
+    """
+      Adds a node entry named "name" with values as nodes from "valueDict" to target "target".
+      The valueDict should be as {with_respect_to_name_1:value1, etc}
+      For example, to add the sensitivities of "y" with respect to "x" and "z", the arguments would be:
+          - target: 'y'
+          - name: 'sensitivity'
+          - valueDict: {'x':0.7, 'z':0.2}
+      @ In, target, str, target parameter to add node value to
+      @ In, name, str, name of characteristic of target to add
+      @ In, valueDict, dict, name:value
+      @ In, root, Node object, optional, node to whcih the "target" belongs or should be added to
+      @ Out, None
+    """
+    if root is None:
+      root = self.getrootnode()
+    targ = self._findTarget(root,target) # TODO pivot value omitted
+    nameNode = HierarchicalNode(self.messageHandler,name)
+    for key,value in valueDict.items():
+      nameNode.appendBranch(HierarchicalNode(self.messageHandler,key,text=value))
+    targ.appendBranch(nameNode)
 
   def _findTarget(self,root,target,pivotVal=None):
     """
@@ -1167,83 +1190,6 @@ class MetadataTree(HierarchicalTree):
     return tNode
 
 
-
-class StaticMetadataTree(MetadataTree):
-  """
-    Class for construction of metadata xml trees used in data objects.  Usually contains summary data
-    such as that produced by postprocessor models.  Two types of tree exist: dynamic and static.  See
-    RAVEN Output type of Files object.
-  """
-  def __init__(self,messageHandler,rootName):
-    """
-      Constructor.
-      @ In, node, Node object, optional, root of tree if provided
-      @ Out, None
-    """
-    self.dynamic = False
-    self.type = 'StaticMetadataTree'
-    MetadataTree.__init__(self,messageHandler,rootName)
-
-
-
-
-class DynamicMetadataTree(MetadataTree):
-  """
-    Class for construction of metadata xml trees used in data objects.  Usually contains summary data
-    such as that produced by postprocessor models.  Two types of tree exist: dynamic and static.  See
-    RAVEN Output type of Files object.
-  """
-  def __init__(self,messageHandler,rootName,pivotParam):
-    """
-      Constructor.
-      @ In, node, Node object, optional, root of tree if provided
-      @ Out, None
-    """
-    self.dynamic = True
-    self.type = 'DynamicMetadataTree'
-    MetadataTree.__init__(self,messageHandler,rootName)
-    self.pivotParam = pivotParam
-
-  def _findTarget(self,root,target,pivotVal):
-    """
-      Used to find target node.  Extension of base class method for Dynamic mode
-      @ In, root, Node object, node to search for target
-      @ In, target, string, name of target to find/create
-      @ In, pivotVal, float, value of pivotParam to use for searching
-      @ Out, tNode, Node object, target node (either created or existing)
-    """
-    pivotVal = float(pivotVal)
-    pNode = self._findPivot(root,pivotVal)
-    tNode = MetadataTree._findTarget(self,pNode,target)
-    return tNode
-
-  def _findPivot(self,root,pivotVal,tol=1e-10):
-    """
-      Finds the node with the desired pivotValue to the given tolerance
-      @ In, root, Node instance, the node to search under
-      @ In, pivotVal, float, match to search for
-      @ In, tol, float, tolerance for match
-      @ Out, pNode, Node instance, matching node
-    """
-    found = False
-    for child in root:
-      #make sure we're looking at a pivot node
-      if child.name != self.pivotParam:
-        continue
-      # careful with inequality signs to check for match
-      if pivotVal > 0:
-        foundCondition = abs(float(child.get('value')) - pivotVal) <= 1e-10*pivotVal
-      else:
-        foundCondition = abs(float(child.get('value')) - pivotVal) >= 1e-10*pivotVal
-      if foundCondition:
-        pivotNode = child
-        found = True
-        break
-    #if not found, make it!
-    if not found:
-      pivotNode = HierarchicalNode(self.messageHandler,self.pivotParam,valuesIn={'value':pivotVal})
-      root.appendBranch(pivotNode)
-    return pivotNode
 
 
 ####################
