@@ -250,6 +250,16 @@ class BaseType(MessageHandler.MessageUser):
     """
     return self.metadataKeys
 
+  def provideGeneralMeta(self):
+    """
+      Returns XML node (staticXMLoutput?) of the metadata this entity wishes to report.
+      Called by the Step to send to output DataObjects
+      @ In, None
+      @ Out, meta, utils.TreeStructure.DataObjectTree, node with sub-elements (or None if none needed)
+    """
+    pass # can be overwritten by particular entities
+
+
   def addMetaKeys(self,*args):
     """
       Adds keywords to a list of expected metadata keys.
